@@ -1,7 +1,6 @@
 name: build-wdi-simple
 
 on:
-  push:
   workflow_dispatch:
 
 env:
@@ -41,8 +40,10 @@ jobs:
           msiexec /a wdk-redist.msi /qn TARGETDIR=%CD%\wdk
           7z x libusb0-redist.zip
           7z x libusbk-redist.7z
+          del /q *.zip *.7z
           move libusb-win32* libusb0
           move libusbK* libusbk
+          dir libusbk\bin\sys\x86
 
       - name: Build examples
         run: |
