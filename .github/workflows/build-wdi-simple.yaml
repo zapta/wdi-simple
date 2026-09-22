@@ -25,7 +25,7 @@ jobs:
             autotools
             git
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           repository: pbatard/libwdi
           ref: v1.5.1
@@ -62,7 +62,7 @@ jobs:
           make
           ls -l examples/*.exe
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: libwdi-examples
           path: |
