@@ -64,5 +64,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wdi-simple
-          path: examples/wdi-simple.exe
+          name: libwdi-examples
+          path: |
+            examples/wdi-simple.exe
+            examples/zadig.exe
