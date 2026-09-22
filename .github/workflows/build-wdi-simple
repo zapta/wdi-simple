@@ -1,0 +1,67 @@
+name: build-wdi-simple
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  WDK_URL: https://go.microsoft.com/fwlink/p/?LinkID=253170
+  LIBUSB0_URL: https://github.com/mcuee/libusb-win32/releases/download/release_1.4.0.0/libusb-win32-bin-1.4.0.0.zip
+  LIBUSBK_URL: https://github.com/mcuee/libusbk/releases/download/V3.1.0.0/libusbK-3.1.0.0-bin.7z
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            base-devel
+            autotools
+            git
+
+      - uses: actions/checkout@v4
+        with:
+          repository: pbatard/libwdi
+          ref: v1.5.1
+          submodules: recursive
+
+      - name: Download WDK and helper drivers
+        shell: cmd
+        run: |
+          curl -L %WDK_URL% -o wdk-redist.msi
+          curl -L %LIBUSB0_URL% -o libusb0-redist.zip
+          curl -L %LIBUSBK_URL% -o libusbk-redist.7z
+          msiexec /a wdk-redist.msi /qn TARGETDIR=%CD%\wdk
+          7z x libusb0-redist.zip
+          7z x libusbk-redist.7z
+          move libusb-win32* libusb0
+          move libusbK* libusbk
+
+      - name: Build examples
+        run: |
+          ./bootstrap.sh
+          ./configure \
+            --build=x86_64-w64-mingw32 \
+            --host=x86_64-w64-mingw32 \
+            --enable-examples-build \
+            --disable-debug \
+            --disable-shared \
+            --disable-32bit \
+            --with-wdkdir="wdk/Windows Kits/8.0" \
+            --with-wdfver=1011 \
+            --with-libusb0="libusb0" \
+            --with-libusbk="libusbk/bin"
+          make
+          ls -l examples/*.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wdi-simple
+          path: examples/wdi-simple.exe
