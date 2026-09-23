@@ -8,14 +8,26 @@ env:
   LIBUSB0_URL: https://github.com/mcuee/libusb-win32/releases/download/release_1.4.0.0/libusb-win32-bin-1.4.0.0.zip
   LIBUSBK_URL: https://github.com/mcuee/libusbk/releases/download/V3.1.0.0/libusbK-3.1.0.0-bin.7z
 
+  # This env is set latter.
+  RELEASE_TAG:
+
 jobs:
   build:
     runs-on: windows-latest
+
     defaults:
       run:
         shell: msys2 {0}
+
     steps:
-      - uses: msys2/setup-msys2@v2
+      - name: Get release and package tags
+        uses: fpgawars/apio-workflows/.github/actions/get-release-and-package-tags@main
+        with:
+          release-tag-var: RELEASE_TAG
+          package-tag-var: PACKAGE_TAG
+
+      - name: Install msys2
+        uses: msys2/setup-msys2@v2
         with:
           msystem: mingw64
           update: true
@@ -25,7 +37,8 @@ jobs:
             autotools
             git
 
-      - uses: actions/checkout@v5
+      - name: Checkout pbatard/libwdi
+        uses: actions/checkout@v5
         with:
           repository: pbatard/libwdi
           ref: v1.5.1
@@ -62,9 +75,37 @@ jobs:
           make
           ls -l examples/*.exe
 
-      - uses: actions/upload-artifact@v6
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v6
         with:
           name: libwdi-examples
           path: |
+            examples/wdi-simple.exe
+            examples/zadig.exe
+
+      - name: Prepare release text
+        run: |
+          cat  > RELEASE-BODY.txt <<EOF
+          ### Zadig build
+          EOF
+
+          cat -n RELEASE-BODY.txt
+
+      - name: Cleanup old pre-releases
+        uses: fpgawars/apio-workflows/.github/actions/cleanup-old-prereleases@main
+
+      - name: Ensure no conflicting release (again)
+        uses: fpgawars/apio-workflows/.github/actions/ensure-no-conflicting-release@main
+        with:
+          release-tag: ${{ env.RELEASE_TAG }}
+
+      - name: Create GitHub pre-release
+        uses: fpgawars/apio-workflows/.github/actions/create-pre-release@main
+        with:
+          release_tag: ${{ env.RELEASE_TAG }}
+          body_path: RELEASE-BODY.txt
+          # We intensionally list explicitly all the expected files rather
+          # then using file patterns.
+          files: |
             examples/wdi-simple.exe
             examples/zadig.exe
